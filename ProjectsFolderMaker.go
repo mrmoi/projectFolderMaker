@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to open file: %v", err)
 	}
-	//defer file.Close()
+	defer file.Close()
 
 	// 2. Read the file line by line
 	scanner := bufio.NewScanner(file)
@@ -35,7 +35,7 @@ func main() {
 		}
 
 		// Neutralize path separators so a name can't escape baseDir
-		folderName = strings.NewReplacer("-", "", "-", "", "  ", "").Replace(folderName)
+		folderName = strings.NewReplacer("/", "-", `\`, "-").Replace(folderName)
 		if folderName == "." || folderName == ".." {
 			log.Printf("Skipping invalid folder name %q", folderName)
 			continue
