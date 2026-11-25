@@ -41,6 +41,13 @@ func main() {
 			continue
 		}
 
+		// Replace hyphen and double spaces
+		folderName = strings.NewReplacer("-", "", "  ", "").Replace(folderName)
+		if folderName == "." || folderName == ".." {
+			log.Printf("Skipping invalid folder name %q", folderName)
+			continue
+		}
+
 		targetPath := filepath.Join(*baseDir, folderName)
 
 		// 3. Create the folder (and any missing parent folders)
