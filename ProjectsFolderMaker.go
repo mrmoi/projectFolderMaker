@@ -23,7 +23,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to open file: %v", err)
 	}
-	defer file.Close()
+	//defer file.Close()
 
 	// 2. Read the file line by line
 	scanner := bufio.NewScanner(file)
