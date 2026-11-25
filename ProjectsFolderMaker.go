@@ -35,7 +35,7 @@ func main() {
 		}
 
 		// Neutralize path separators so a name can't escape baseDir
-		folderName = strings.NewReplacer("/", "-", `\`, "-").Replace(folderName)
+		folderName = strings.NewReplacer("-", "", "-", "", "  ", "").Replace(folderName)
 		if folderName == "." || folderName == ".." {
 			log.Printf("Skipping invalid folder name %q", folderName)
 			continue
