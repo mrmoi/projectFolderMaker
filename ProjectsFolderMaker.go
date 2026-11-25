@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -10,39 +11,40 @@ import (
 	"strings"
 )
 
+var quoRe = regexp.MustCompile(`\bQUO-\d{5}-[A-Z0-9]{4}\b`)
+
 func main() {
+	inputPath := flag.String("input", "/Users/Moises.Martinez/Downloads/q4ProjectList.txt", "text file containing folder names, one per line")
+	baseDir := flag.String("base", "/Users/Moises.Martinez/Downloads/Projects/q4-2026/", "base directory where folders are created")
+	flag.Parse()
+
 	// 1. Open the text file containing the folder names
-	file, err := os.Open("/Users/Moises.Martinez/Downloads/q4ProjectList.txt")
+	file, err := os.Open(*inputPath)
 	if err != nil {
 		log.Fatalf("Failed to open file: %v", err)
 	}
 	defer file.Close()
 
-	// Optional: Specify a base directory where folders should be created
-	baseDir := "/Users/Moises.Martinez/Downloads/Projects/q4-2026/"
-
 	// 2. Read the file line by line
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-
-		var quoRe = regexp.MustCompile(`\bQUO-\d{5}-[A-Z0-9]{4}\b`)
-		folderName := quoRe.ReplaceAllString(scanner.Text(), "")
+		// Remove quote IDs, then trim whitespace and skip empty names
+		folderName := strings.TrimSpace(quoRe.ReplaceAllString(scanner.Text(), ""))
 		if folderName == "" {
 			continue
 		}
 
-		//Trim whitespace and skip empty lines
-		folderNameTrimmed := strings.TrimSpace(scanner.Text())
-		if folderNameTrimmed == "" {
+		// Neutralize path separators so a name can't escape baseDir
+		folderName = strings.NewReplacer("/", "-", `\`, "-").Replace(folderName)
+		if folderName == "." || folderName == ".." {
+			log.Printf("Skipping invalid folder name %q", folderName)
 			continue
 		}
 
-		// Clean and join the path safely for any OS
-		targetPath := filepath.Join(baseDir, filepath.Clean(folderName))
+		targetPath := filepath.Join(*baseDir, folderName)
 
-		// 3. Create the folder (and any nested parent folders)
-		err := os.MkdirAll(targetPath, 0755)
-		if err != nil {
+		// 3. Create the folder (and any missing parent folders)
+		if err := os.MkdirAll(targetPath, 0755); err != nil {
 			log.Printf("Error creating folder %q: %v", targetPath, err)
 			continue
 		}
