@@ -15,35 +15,44 @@ import (
 
 var quoRe = regexp.MustCompile(`\bQUO-\d{5}-[A-Z0-9]{4}\b`)
 
-// openFile opens path in the system's default application.
-func openFile(path string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("open", path)
-	case "windows":
-		cmd = exec.Command("cmd", "/c", "start", "", path)
-	default:
-		cmd = exec.Command("xdg-open", path)
+// pickFile asks the user to choose the input text file. On macOS it shows the
+// native file dialog; if that is unavailable or cancelled, or on other systems,
+// it falls back to typing a path at the terminal (Enter keeps defaultPath).
+func pickFile(defaultPath string) (string, error) {
+	if runtime.GOOS == "darwin" {
+		out, err := exec.Command("osascript", "-e",
+			`POSIX path of (choose file with prompt "Select the project list text file")`).Output()
+		if err == nil {
+			if path := strings.TrimSpace(string(out)); path != "" {
+				return path, nil
+			}
+		}
 	}
-	return cmd.Start()
+
+	fmt.Printf("Path to text file [%s]: ", defaultPath)
+	line, err := bufio.NewReader(os.Stdin).ReadString('\n')
+	if err != nil && line == "" {
+		return "", fmt.Errorf("no file selected: %w", err)
+	}
+	line = strings.Trim(strings.TrimSpace(line), `"'`)
+	if line == "" {
+		return defaultPath, nil
+	}
+	return line, nil
 }
 
 func main() {
 	inputPath := flag.String("input", "/Users/Moises.Martinez/Downloads/q4ProjectList.txt", "text file containing folder names, one per line")
 	baseDir := flag.String("base", "/Users/Moises.Martinez/Downloads/Projects/q4-2026/", "base directory where folders are created")
-	openOnly := flag.Bool("open", false, "open the input text file in the default application and exit")
+	pick := flag.Bool("pick", false, "choose the input text file from a prompt instead of using -input")
 	flag.Parse()
 
-	if *openOnly {
-		if _, err := os.Stat(*inputPath); err != nil {
-			log.Fatalf("Cannot open file: %v", err)
+	if *pick {
+		chosen, err := pickFile(*inputPath)
+		if err != nil {
+			log.Fatalf("Failed to pick file: %v", err)
 		}
-		if err := openFile(*inputPath); err != nil {
-			log.Fatalf("Failed to open %q: %v", *inputPath, err)
-		}
-		fmt.Printf("Opened: %s\n", *inputPath)
-		return
+		*inputPath = chosen
 	}
 
 	// 1. Open the text file containing the folder names
